@@ -1,0 +1,82 @@
+---
+title: "Countries"
+author: "Samir Gadkari"
+date: "3/1/2021"
+output: html_document
+---
+
+We will explore which countries are getting better with a view towards
+investing in them.
+
+Data obtained from: 
+
+  * https://www.resourcepanel.org/global-material-flows-database
+  * https://github.com/owid/owid-datasets which gets it's data from
+    https://ourworldindata.org/global-education
+
+Ideas to consider:
+
+  * How many people are in the workforce, and how many are projected to
+    be working for the next 10 years. Build a model using:
+    * Birth rate
+    * Number of people unemployed
+    * Death rate
+  * How many people does the workforce have to sustain:
+    * Number of Elderly - Calculate based on life span
+    * Number of Young - Calculate based on when kids start working.
+      This is a grey area, since kids work unofficially (by helping their
+      parents, or even getting a job off-book).
+    * Retirement age
+  * Education:
+    * Data at [](file://../owid-datasets/datasets/"Global Data Set on Education Quality (1965-2015) - Altinok, Angrist, and Patrinos (2018)"/"Global Data Set on Education Quality (1965-2015) - Altinok, Angrist, and Patrinos (2018).csv")
+    * How many people can read and write.
+      Reading/writing is just the first step. For a country to grow, people
+      have to learn tools (like technology).
+    * Higher education (college, and above). Some countries (ex. Germany)
+      also have two tracks in college - one for the people who have better
+      grades, and one for those that don't. Those who have better grades
+      end up supervising those that don't.  Those that don't, become masters
+      in a particular technology which they learn in college.
+    * Government support for education
+  * Imports and exports
+    * Imports into the country could be because there is more development
+      (a plus) or because the population is growing (a minus).
+      * Match import type to the development within the country. ex:
+        * Iron ore is used for rebars for housing development. 
+          Also check out other required resources (like cement for housing)
+          to tell us what is going on in the country. Most countries
+          use iron ore for housing - but some like US and Japan use wood.
+        * Iron ore is also used to build pipes and machinery.
+        * Educate ourselves on what inputs go into making:
+          * Factories
+          * Pipelines
+          * Machinery
+          * Clothes
+          * Food (ex. fertilizer)
+          * Water treatment plants
+          * Roads, rail, ships for transport of goods
+          
+          If the items that are required are being imported, it will tell us 
+          in which direction the country is growing.
+    * Exports are great because they bring in outside money.
+      Make sure natural resources are not being depleted due to exports.
+      Exports also tell us what the country is capable of doing easily.
+      All the resources needed to generate the product that is being exported,
+      are easily available. Make sure those resources are enough for the
+      forseeable future.
+  * Energy expenditure
+    * If more energy is being spent within the country, it's probably for
+      factories - a plus if you're making your energy from sustainable
+      resources. If not from sustainable resources, then you may continue
+      for a while until you can do so. In the meantime, is the country moving
+      to sustainable resources?
+    * If energy is being brought in, is the country providing it able to
+      maintain that export? Does the importing country need more each year,
+      and does the exporting country able to support it.
+  * Natural resources
+    * Are natural resources plentiful, or are they being depleted?
+    * Are they being used for the benefit of the population?
+    * Create a list of natural resources that each country requires
+  * Is the country able to feed it's own people?
+  * Is drinking water available for the population?
+  
