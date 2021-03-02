@@ -101,6 +101,13 @@ We're going to ignore all lines for Entity names that have parentheses in them.
 They're for each area of the country. When we already have the country values,
 we don't need them. Also, they're sometimes only for some parts of the country
 (see US in Entity column).
+
+We keep the current score and the slope of the scores. The current score tells
+us the latest education quality. It's the most important compared to the earlier
+scores. The slope of the scores tells us how much improvement there is in
+the country. Since the year column is 5 years apart, we can compare the
+slopes between countries.
+
 ```{r}
 ed_quality <- ed_quality %>%
   select(Entity, Year, 
@@ -122,6 +129,25 @@ ed_quality <- ed_quality %>%
            (entity == "Belgium French")))
 ```
 
+```{r}
+ed_spending <- read_csv("../owid-datasets/datasets/Government Education Expenditure 1960-2010 - Szirmai (2015)/Government Education Expenditure 1960-2010 - Szirmai (2015).csv")
+ed_spending
+```
+
+```{r}
+ed_spending %>%
+  rename(entity = Entity,
+         govt_spend = "Government Education Expenditure 1960-2010 (Szirmai (2015))") %>%
+  mutate(govt_spend = as.numeric(govt_spend)) %>%
+  filter(!is.na(govt_spend)) %>%
+  group_by(entity) %>%
+  summarise(
+    year = last(Year),
+    govt_spend_perc_gdp = last(govt_spend),
+    slope_govt_spend_perc_gdp = lm(govt_spend ~ Year)$coefficients[[2]]
+  )
+  
+```
 
 ## 3 Imports and Exports
 
