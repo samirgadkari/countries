@@ -5,6 +5,14 @@ date: "3/1/2021"
 output: html_document
 ---
 
+```{r}
+library(tidyverse)
+
+# library(reticulate)
+# use_python("/usr/local/bin/python")
+```
+
+
 We will explore which countries are getting better with a view towards
 investing in them.
 
@@ -80,3 +88,41 @@ Ideas to consider:
   * Is the country able to feed it's own people?
   * Is drinking water available for the population?
   
+## 1 Workforce
+
+## 2 Education
+
+```{r}
+ed_quality <- read_csv("../owid-datasets/datasets/Global Data Set on Education Quality (1965-2015) - Altinok, Angrist, and Patrinos (2018)/Global Data Set on Education Quality (1965-2015) - Altinok, Angrist, and Patrinos (2018).csv")
+ed_quality
+```
+
+We're going to ignore all lines for Entity names that have parentheses in them.
+They're for each area of the country. When we already have the country values,
+we don't need them. Also, they're sometimes only for some parts of the country
+(see US in Entity column).
+```{r}
+ed_quality <- ed_quality %>%
+  select(Entity, Year, 
+         "Average harmonised learning outcome score (Altinok, Angrist, and Patrinos (2018))") %>%
+  rename(avg_score = "Average harmonised learning outcome score (Altinok, Angrist, and Patrinos (2018))",
+         entity = Entity) %>%
+  filter(!str_detect(entity, "\\(")) %>%
+  group_by(entity) %>%
+  summarise(
+    year = max(Year),
+    score_slope = lm(avg_score ~ Year)$coefficients[[2]],
+    last_score = avg_score[row_number() == n()]
+  )
+```
+
+```{r}
+ed_quality <- ed_quality %>%
+  filter(!((entity == "Belgium Flemish") |
+           (entity == "Belgium French")))
+```
+
+
+## 3 Imports and Exports
+
+## 4 Intrastructure development
