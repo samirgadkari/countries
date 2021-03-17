@@ -5,11 +5,11 @@ date: "3/1/2021"
 output: html_document
 ---
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 library(tidyverse)
-
-# library(reticulate)
-# use_python("/usr/local/bin/python")
+library(rjson)
+library(RPostgres)
+library(DBI)
 ```
 
 
@@ -44,7 +44,8 @@ Ideas to consider:
       also have two tracks in college - one for the people who have better
       grades, and one for those that don't. Those who have better grades
       end up supervising those that don't.  Those that don't, become masters
-      in a particular technology which they learn in college.
+      in a particular technology which they learn in college and are highly
+      regarded as skilled workers.
     * Government support for education
   * Imports and exports
     * Imports into the country could be because there is more development
@@ -113,11 +114,11 @@ ed_quality <- ed_quality %>%
   select(Entity, Year, 
          "Average harmonised learning outcome score (Altinok, Angrist, and Patrinos (2018))") %>%
   rename(avg_score = "Average harmonised learning outcome score (Altinok, Angrist, and Patrinos (2018))",
-         entity = Entity) %>%
-  filter(!str_detect(entity, "\\(")) %>%
-  group_by(entity) %>%
+         country = Entity) %>%
+  filter(!str_detect(country, "\\(")) %>%
+  group_by(country) %>%
   summarise(
-    year = max(Year),
+    year = as.integer(max(Year)),
     score_slope = lm(avg_score ~ Year)$coefficients[[2]],
     last_score = avg_score[row_number() == n()]
   )
@@ -125,8 +126,9 @@ ed_quality <- ed_quality %>%
 
 ```{r}
 ed_quality <- ed_quality %>%
-  filter(!((entity == "Belgium Flemish") |
-           (entity == "Belgium French")))
+  filter(!((country == "Belgium Flemish") |
+           (country == "Belgium French")))
+ed_quality
 ```
 
 ```{r}
@@ -134,21 +136,88 @@ ed_spending <- read_csv("../owid-datasets/datasets/Government Education Expendit
 ed_spending
 ```
 
+Rename the government spending column:
 ```{r}
-ed_spending %>%
-  rename(entity = Entity,
-         govt_spend = "Government Education Expenditure 1960-2010 (Szirmai (2015))") %>%
-  mutate(govt_spend = as.numeric(govt_spend)) %>%
+ed_spending <- ed_spending %>%
+  rename(country = Entity,
+         govt_spend = "Government Education Expenditure 1960-2010 (Szirmai (2015))")
+```
+
+```{r}
+ed_spending <- ed_spending %>%
   filter(!is.na(govt_spend)) %>%
-  group_by(entity) %>%
+  mutate(govt_spend = as.numeric(govt_spend)) %>%
+  group_by(country) %>%
   summarise(
-    year = last(Year),
+    year = as.integer(last(Year)),
     govt_spend_perc_gdp = last(govt_spend),
     slope_govt_spend_perc_gdp = lm(govt_spend ~ Year)$coefficients[[2]]
   )
-  
+
+ed_spending
 ```
+
+Let's see what is the last year we have for countries' education-spending data:
+```{r}
+sapply(ed_spending, function(x) length(unique(x)))
+```
+
+So we have only `r length(ed_spending$entity)` countries. Let's see if they're right.
+There are a few NA values in the slope. Let's remove those countries.
+Also "High-income countries" is a row - let's remove it. 
+
+```{r}
+ed_spending <- ed_spending %>%
+  filter(!is.na(govt_spend_perc_gdp) & !is.na(slope_govt_spend_perc_gdp)) %>%
+  filter(country != "High-income countries")
+
+ed_spending
+```
+Now there are only `r length(ed_spending$entity)` countries. We may decide not to use this table, since it limits our options to only `r length(ed_spending$entity)` countries. Or, we could decide to use it if the countries we select fall into this group. Then we could compare them using this table as well. Let's keep the table for now.
 
 ## 3 Imports and Exports
 
 ## 4 Intrastructure development
+
+## Load tables into AWS Redshift
+
+We need all this information to connect to the Redshift database:
+
+    Endpoint
+    Database name
+    Port
+    (Master) username
+    password
+    JDBC URL
+
+
+```{r}
+db_connect <- function(db, host, port) {
+  secrets <- fromJSON(file = "../secrets.json")
+  dbConnect(RPostgres::Postgres(),
+            dbname = db,
+            host = host,
+            port = port,
+            user = secrets$username,
+            password = secrets$password)
+}
+
+db_disconnect <- function(con) {
+  dbDisconnect(con)
+}
+```
+
+```{r}
+secrets <- fromJSON(file = "../secrets.json")
+con<-dbConnect(RPostgres::Postgres())
+
+dbSendQuery(con, "CREATE DATABASE countries;")
+
+con <- db_connect("countries", "localhost", "5432")
+```
+
+```{r}
+dbCreateTable(con, "ed_spending", ed_spending)
+dbCreateTable(con, "ed_quality", ed_quality)
+```
+
