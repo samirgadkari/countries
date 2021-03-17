@@ -251,25 +251,56 @@ flows %>%
   filter(country == "Afghanistan") %>%
   filter(flow == "DMC") %>%
   filter(product %in% industrial_products) %>%
-  ggplot(aes(year, log2(amount))) +
+  ggplot(aes(year, amount)) +
   geom_line(aes(group = product, color = product), na.rm = TRUE) +
   scale_x_continuous(breaks = c(1970, 1990, 2010))
 ```
 
+Let's break down the total amount of minerals and energy consumed by each
+country per year
+
+```{r}
+energy <- c("Coal", "Natural Gas", "Petroleum")
+minerals <- c("Ferrous ores", "Non-ferrous ores", "construction minerals",
+              "ind/ag minerals")
+
+DMC_PTB <- function(product_type) {
+  flows %>%
+    filter(product %in% product_type) %>%
+    group_by(country, flow) %>%
+    summarise(
+      amount = sum(amount)
+    ) %>%
+    pivot_wider(names_from = flow, values_from = amount)
+}
+
+energy_flows <- DMC_PTB(energy)
+energy_flows
+mineral_flows <- DMC_PTB(minerals)
+mineral_flows
+
+energy_flows %>%
+  ggplot(aes(DMC, PTB)) +
+  geom_point(na.rm = TRUE) +
+  annotate("text",
+           x = energy_flows$DMC,
+           y = energy_flows$PTB + 0.22e+10,
+           label = energy_flows$country,
+           na.rm = TRUE)
+
+mineral_flows %>%
+  ggplot(aes(DMC, PTB)) +
+  geom_point(na.rm = TRUE) +
+  annotate("text", 
+           x = mineral_flows$DMC, 
+           y = mineral_flows$PTB + 0.7e+9, 
+           label = mineral_flows$country,
+           na.rm = TRUE)
+```
 
 ## 4 Intrastructure development
 
-## Load tables into AWS Redshift
-
-We need all this information to connect to the Redshift database:
-
-    Endpoint
-    Database name
-    Port
-    (Master) username
-    password
-    JDBC URL
-
+## Load tables into Postgres
 
 ```{r}
 db_connect <- function(db = NULL, host, port) {
