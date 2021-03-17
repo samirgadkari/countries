@@ -10,6 +10,7 @@ library(tidyverse)
 library(rjson)
 library(RPostgres)
 library(DBI)
+library(readxl)
 ```
 
 
@@ -177,6 +178,85 @@ Now there are only `r length(ed_spending$entity)` countries. We may decide not t
 
 ## 3 Imports and Exports
 
+Let's read in the dataset for exports and imports:
+```{r}
+flows <- 
+  read_excel("../IRP Material Flows Database Bundle Post October 2020/UNEP IRP MFADB Vers 2018.xlsx",
+             sheet = "13_Category")
+
+flows
+```
+In this table:
+
+  * DE  = Domestic Extraction. What the economy creates organically.
+  * DMI = Direct Material Input. Measure of all material that is used in
+          the economy (including extracted local and imported external material).
+          Don't look at this in regions like the EU, since importing into an
+          EU country will count double since the EU is consuming + importing
+          the same amount.
+          DMI = DE + IM
+  * DMC = Domestic Material Consumption = Domestic extraction - exports + imports
+          DMC = DE + IM - EX
+  * PTB = Physical Trade Balance = Physical imports - physical exports
+          PTB = IM - EX
+  
+So we're mainly interested in DMC. If this amount is growing compared to the
+population, we can say the economy is consuming larger amounts of material,
+and so it is growing. Notice that this is not related to monetary growth,
+just the consumption habits of people.
+
+We're also interested in PTB since it tells us if the economy is generating
+more of the material it needs (negative PTB) or less (positive PTB).
+
+```{r}
+flows <- flows %>%
+  filter((Flow == "DMC") | (Flow == "PTB")) %>%
+  select(-FlowAndUnits) %>%
+  pivot_longer(`1970` : `2017`,
+               names_to = "year",
+               values_to = "amount")
+flows <- flows %>%
+  filter(!near(amount, 0))
+flows <- flows %>%
+  mutate(year = as.integer(year))
+
+flows$product <- stringr::str_replace(flows$product, 
+                     "Non-metallic minerals - construction dominant",
+                     "construction minerals")
+flows$product <- stringr::str_replace(flows$product,
+    "Non-metallic minerals - industrial or agricultural dominant",
+    "ind/ag minerals")
+
+names(flows) <- stringr::str_to_lower(names(flows))
+flows
+```
+```{r}
+flows %>%
+  summarise(across(country:units, n_distinct))
+
+unique(flows$product)
+unique(flows$flow)
+```
+
+Let's look at DMC for Afghanistan:
+
+```{r}
+industrial_products <- 
+  c("Coal", "Ferrous ores", "Natural Gas", "Non-ferrous ores", 
+    "construction minerals",
+    "ind/ag minerals",
+    "Petroleum")
+
+flows %>%
+  filter(country == "Afghanistan") %>%
+  filter(flow == "DMC") %>%
+  filter(product %in% industrial_products) %>%
+  ggplot(aes(year, log2(amount))) +
+  geom_line(aes(group = product, color = product), na.rm = TRUE) +
+  scale_x_continuous(breaks = c(1970, 1990, 2010))
+```
+
+
 ## 4 Intrastructure development
 
 ## Load tables into AWS Redshift
@@ -192,7 +272,7 @@ We need all this information to connect to the Redshift database:
 
 
 ```{r}
-db_connect <- function(db, host, port) {
+db_connect <- function(db = NULL, host, port) {
   secrets <- fromJSON(file = "../secrets.json")
   dbConnect(RPostgres::Postgres(),
             dbname = db,
@@ -209,15 +289,19 @@ db_disconnect <- function(con) {
 
 ```{r}
 secrets <- fromJSON(file = "../secrets.json")
-con<-dbConnect(RPostgres::Postgres())
-
-dbSendQuery(con, "CREATE DATABASE countries;")
 
 con <- db_connect("countries", "localhost", "5432")
 ```
 
 ```{r}
-dbCreateTable(con, "ed_spending", ed_spending)
-dbCreateTable(con, "ed_quality", ed_quality)
+if (!dbExistsTable(con, "ed_spending")) {
+  dbCreateTable(con, "ed_spending", ed_spending)
+  dbAppendTable(con, "ed_spending", ed_spending)
+}
+
+if (!dbExistsTable(con, "ed_quality")) {
+  dbCreateTable(con, "ed_quality", ed_quality)
+  dbAppendTable(con, "ed_quality", ed_quality)
+}
 ```
 
