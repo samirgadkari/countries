@@ -212,6 +212,7 @@ more of the material it needs (negative PTB) or less (positive PTB).
 flows <- flows %>%
   filter((Flow == "DMC") | (Flow == "PTB")) %>%
   select(-FlowAndUnits) %>%
+  rename(product = Product) %>%
   pivot_longer(`1970` : `2017`,
                names_to = "year",
                values_to = "amount")
@@ -331,6 +332,26 @@ pop <- life_exp_and_pop %>%
 pop
 ```
 
+To find population per age group, we can use another table from OWID:
+```{r}
+pop_per_age_group <- read.csv("../owid-datasets/datasets/Total population by broad age group, both sexes, 1950-2100 - UN Population Division (2015)/Total population by broad age group, both sexes, 1950-2100 - UN Population Division (2015).csv")
+pop_per_age_group
+```
+Change column names to lowercase. Make names shorter.
+```{r}
+names(pop_per_age_group) <- stringr::str_to_lower(names(pop_per_age_group))
+pop_per_age_group <- pop_per_age_group %>%
+  rename(age_0_to_4 = `x0.to.4..un.population.division..2015..`) %>%
+  rename(age_5_to_14 = `x5.to.14..un.population.division..2015..`) %>%
+  rename(age_15_to_24 = `x15.to.24..un.population.division..2015..`) %>%
+  rename(age_25_to_60 = `x25.to.60..un.population.division..2015..`) %>%
+  rename(age_70_plus = `x70...un.population.division..2015..`) %>%
+  rename(country = entity) %>%
+  filter(year < 2015)  # Anything after 2014 is prediction, since data was
+                       # collected in 2015. We don't want it.
+pop_per_age_group
+```
+
 
 ## 4 Intrastructure development
 
@@ -360,7 +381,7 @@ con <- db_connect("countries", "localhost", "5432")
 
 ```{r}
 create_postgres_table <- function(con, table_name, table_df) {
-  if (!dbExistsTable(con, table_name, table_df)) {
+  if (!dbExistsTable(con, table_name)) {
     dbCreateTable(con, table_name, table_df)
     dbAppendTable(con, table_name, table_df)
   }
@@ -372,4 +393,5 @@ create_postgres_table(con, "energy_flows", energy_flows)
 create_postgres_table(con, "mineral_flows", mineral_flows)
 create_postgres_table(con, "life_exp", life_exp)
 create_postgres_table(con, "population", pop)
+create_postgres_table(con, "pop_per_age_group", pop_per_age_group)
 ```
