@@ -297,6 +297,40 @@ mineral_flows %>%
            label = mineral_flows$country,
            na.rm = TRUE)
 ```
+Notice that these values are not compared to the population.
+We cannot really compare these countries unless we compare consumption
+per million people (for example). Otherwise, the denser countries will
+always seem to be consuming more.
+
+## Populations
+
+```{r}
+life_exp_and_pop <- read_csv("../owid-datasets/datasets/Life expectancy & population - Gapminder (2019), UN (2019), and Our World In Data (2019)/Life expectancy & population - Gapminder (2019), UN (2019), and Our World In Data (2019).csv")
+life_exp_and_pop
+```
+
+Let's remove the rows with year = 1800 and year = 1950
+```{r}
+life_exp_and_pop <- life_exp_and_pop %>% filter((Year != 1800) & (Year != 1950))
+names(life_exp_and_pop) <- stringr::str_to_lower(names(life_exp_and_pop))
+life_exp_and_pop <- life_exp_and_pop %>% 
+  rename(life_expectancy = `life expectancy`) %>%
+  rename(country = entity)
+life_exp_and_pop
+```
+Let's split the table into two - one with just life expectancy, and
+one with just the population. This will allow us to use just the data we need.
+
+```{r}
+life_exp <- life_exp_and_pop %>%
+  select(country, year, life_expectancy)
+life_exp
+
+pop <- life_exp_and_pop %>%
+  select(country, year, population)
+pop
+```
+
 
 ## 4 Intrastructure development
 
@@ -325,14 +359,17 @@ con <- db_connect("countries", "localhost", "5432")
 ```
 
 ```{r}
-if (!dbExistsTable(con, "ed_spending")) {
-  dbCreateTable(con, "ed_spending", ed_spending)
-  dbAppendTable(con, "ed_spending", ed_spending)
+create_postgres_table <- function(con, table_name, table_df) {
+  if (!dbExistsTable(con, table_name, table_df)) {
+    dbCreateTable(con, table_name, table_df)
+    dbAppendTable(con, table_name, table_df)
+  }
 }
 
-if (!dbExistsTable(con, "ed_quality")) {
-  dbCreateTable(con, "ed_quality", ed_quality)
-  dbAppendTable(con, "ed_quality", ed_quality)
-}
+create_postgres_table(con, "ed_spending", ed_spending)
+create_postgres_table(con, "ed_quality", ed_quality)
+create_postgres_table(con, "energy_flows", energy_flows)
+create_postgres_table(con, "mineral_flows", mineral_flows)
+create_postgres_table(con, "life_exp", life_exp)
+create_postgres_table(con, "population", pop)
 ```
-
