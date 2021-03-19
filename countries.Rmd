@@ -327,10 +327,10 @@ dmc_ptb_energy
 dmc_ptb_minerals = DMC_PTB("minerals")
 dmc_ptb_minerals
 
-dmc_ptb <- dmc_ptb_energy %>% 
+dmc_ptb_flows <- dmc_ptb_energy %>% 
   full_join(dmc_ptb_minerals) %>%
   arrange(country, product, flow)
-dmc_ptb
+dmc_ptb_flows
 ```
 Notice that these values are not compared to the population.
 We cannot really compare these countries unless we compare consumption
@@ -423,9 +423,9 @@ create_postgres_table <- function(con, table_name, table_df) {
 
 create_postgres_table(con, "ed_spending", ed_spending)
 create_postgres_table(con, "ed_quality", ed_quality)
-create_postgres_table(con, "energy_flows", energy_flows)
-create_postgres_table(con, "mineral_flows", mineral_flows)
 create_postgres_table(con, "life_exp", life_exp)
-create_postgres_table(con, "population", pop)
 create_postgres_table(con, "pop_per_age_group", pop_per_age_group)
+create_postgres_table(con, "dmc_ptb_flows", dmc_ptb_flows)
+
+# dbRemoveTable(con, "population")
 ```
