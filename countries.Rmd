@@ -217,8 +217,6 @@ flows <- flows %>%
                names_to = "year",
                values_to = "amount")
 flows <- flows %>%
-  filter(!near(amount, 0))
-flows <- flows %>%
   mutate(year = as.integer(year))
 
 flows$product <- stringr::str_replace(flows$product, 
@@ -229,11 +227,16 @@ flows$product <- stringr::str_replace(flows$product,
     "ind/ag minerals")
 
 names(flows) <- stringr::str_to_lower(names(flows))
+
+# Since there are only tonnes as units, drop the units column
+unique(flows$units)
+flows <- flows %>% select(-units)
+
 flows
 ```
 ```{r}
 flows %>%
-  summarise(across(country:units, n_distinct))
+  summarise(across(country:year, n_distinct))
 
 unique(flows$product)
 unique(flows$flow)
@@ -265,38 +268,55 @@ energy <- c("Coal", "Natural Gas", "Petroleum")
 minerals <- c("Ferrous ores", "Non-ferrous ores", "construction minerals",
               "ind/ag minerals")
 
-DMC_PTB <- function(product_type) {
-  flows %>%
-    filter(product %in% product_type) %>%
-    group_by(country, flow) %>%
-    summarise(
-      amount = sum(amount)
-    ) %>%
-    pivot_wider(names_from = flow, values_from = amount)
+flows <- flows %>%
+  filter((product %in% energy) | (product %in% minerals)) %>%
+  mutate(
+    product = case_when(
+      product %in% energy ~ "energy",
+      product %in% minerals ~ "minerals"
+    )
+  ) %>%
+  group_by(country, product, flow, year) %>%
+  summarise(
+    amount = sum(amount)
+  )
+flows
+```
+
+```{r}
+all_na <- function(amount) {
+  (n_distinct(amount) == 1) & is.na(amount[[1]])
 }
 
-energy_flows <- DMC_PTB(energy)
-energy_flows
-mineral_flows <- DMC_PTB(minerals)
-mineral_flows
+DMC_PTB <- function(prod) {
+  flows %>%
+    filter(product == prod) %>%
+    group_by(country, flow) %>%
+    arrange(year) %>%
+    summarise(
+      new_amount = ifelse (all_na(amount), 
+                           NA, 
+                           mean(amount, na.rm = TRUE)),
+      new_amount_slope = ifelse (all_na(amount), 
+                                 NA, 
+                                 lm(amount ~ year)[[2]])
+    ) %>%
+    rename(
+      amount = new_amount,
+      amount_slope = new_amount_slope
+    ) %>%
+    mutate(product = prod) %>%
+    select(country, product, flow, amount, amount_slope)
+}
 
-energy_flows %>%
-  ggplot(aes(DMC, PTB)) +
-  geom_point(na.rm = TRUE) +
-  annotate("text",
-           x = energy_flows$DMC,
-           y = energy_flows$PTB + 0.22e+10,
-           label = energy_flows$country,
-           na.rm = TRUE)
+dmc_ptb_energy = DMC_PTB("energy")
+dmc_ptb_energy
+dmc_ptb_minerals = DMC_PTB("minerals")
+dmc_ptb_minerals
 
-mineral_flows %>%
-  ggplot(aes(DMC, PTB)) +
-  geom_point(na.rm = TRUE) +
-  annotate("text", 
-           x = mineral_flows$DMC, 
-           y = mineral_flows$PTB + 0.7e+9, 
-           label = mineral_flows$country,
-           na.rm = TRUE)
+dmc_ptb <- dmc_ptb_energy %>% 
+  full_join(dmc_ptb_minerals)
+dmc_ptb
 ```
 Notice that these values are not compared to the population.
 We cannot really compare these countries unless we compare consumption
