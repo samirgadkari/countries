@@ -186,6 +186,19 @@ flows <-
 
 flows
 ```
+```{r}
+unique(flows$Country)
+```
+
+Leave only countries in our dataframe - not regions.
+```{r}
+flows <- flows %>%
+  filter(!(Country %in% c("Asia + Pacific", "EECCA",
+                          "Latin America + Caribbean", "North America",
+                          "West Asia", "World")))
+flows
+```
+
 In this table:
 
   * DE  = Domestic Extraction. What the economy creates organically.
