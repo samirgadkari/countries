@@ -315,7 +315,8 @@ dmc_ptb_minerals = DMC_PTB("minerals")
 dmc_ptb_minerals
 
 dmc_ptb <- dmc_ptb_energy %>% 
-  full_join(dmc_ptb_minerals)
+  full_join(dmc_ptb_minerals) %>%
+  arrange(country, product, flow)
 dmc_ptb
 ```
 Notice that these values are not compared to the population.
