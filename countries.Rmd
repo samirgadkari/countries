@@ -99,16 +99,9 @@ ed_quality <- read_csv("../owid-datasets/datasets/Global Data Set on Education Q
 ed_quality
 ```
 
-We're going to ignore all lines for Entity names that have parentheses in them.
-They're for each area of the country. When we already have the country values,
-we don't need them. Also, they're sometimes only for some parts of the country
-(see US in Entity column).
+We're going to ignore all lines for Entity names that have parentheses in them. They're for each area of the country. When we already have the country values, we don't need them. Also, they're sometimes only for some parts of the country (see US in Entity column).
 
-We keep the current score and the slope of the scores. The current score tells
-us the latest education quality. It's the most important compared to the earlier
-scores. The slope of the scores tells us how much improvement there is in
-the country. Since the year column is 5 years apart, we can compare the
-slopes between countries.
+We keep the current score and the slope of the scores. The current score tells us the latest education quality. It's the most important compared to the earlier scores. The slope of the scores tells us how much improvement there is in the country. Since the year column is 5 years apart, we can compare the slopes between countries.
 
 ```{r}
 ed_quality <- ed_quality %>%
@@ -119,10 +112,11 @@ ed_quality <- ed_quality %>%
   filter(!str_detect(country, "\\(")) %>%
   group_by(country) %>%
   summarise(
-    year = as.integer(max(Year)),
     score_slope = lm(avg_score ~ Year)$coefficients[[2]],
-    last_score = avg_score[row_number() == n()]
-  )
+    last_year = as.integer(max(Year)),
+    avg_score = mean(avg_score)
+  ) %>%
+  select(country, last_year, avg_score, score_slope)
 ```
 
 ```{r}
@@ -150,8 +144,8 @@ ed_spending <- ed_spending %>%
   mutate(govt_spend = as.numeric(govt_spend)) %>%
   group_by(country) %>%
   summarise(
-    year = as.integer(last(Year)),
-    govt_spend_perc_gdp = last(govt_spend),
+    last_year = as.integer(max(Year)),
+    avg_govt_spend_perc_gdp = mean(govt_spend),
     slope_govt_spend_perc_gdp = lm(govt_spend ~ Year)$coefficients[[2]]
   )
 
@@ -169,7 +163,8 @@ Also "High-income countries" is a row - let's remove it.
 
 ```{r}
 ed_spending <- ed_spending %>%
-  filter(!is.na(govt_spend_perc_gdp) & !is.na(slope_govt_spend_perc_gdp)) %>%
+  filter(!is.na(avg_govt_spend_perc_gdp) &
+           !is.na(slope_govt_spend_perc_gdp)) %>%
   filter(country != "High-income countries")
 
 ed_spending
@@ -307,6 +302,7 @@ DMC_PTB <- function(prod) {
     group_by(country, flow) %>%
     arrange(year) %>%
     summarise(
+      last_year = max(year),
       new_amount = ifelse (all_na(amount), 
                            NA, 
                            mean(amount, na.rm = TRUE)),
@@ -319,7 +315,7 @@ DMC_PTB <- function(prod) {
       amount_slope = new_amount_slope
     ) %>%
     mutate(product = prod) %>%
-    select(country, product, flow, amount, amount_slope)
+    select(country, last_year, product, flow, amount, amount_slope)
 }
 
 dmc_ptb_energy = DMC_PTB("energy")
@@ -366,6 +362,7 @@ life_exp <- life_exp_and_pop %>%
   select(-population) %>%
   group_by(country) %>%
   summarise(
+    last_year = max(year),
     life_exp = mean(life_expectancy, na.rm = TRUE),
     slope_life_exp = lm(life_expectancy ~ year)$coefficients[[2]]
   )
