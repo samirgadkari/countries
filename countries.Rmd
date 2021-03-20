@@ -312,7 +312,7 @@ DMC_PTB <- function(prod) {
                            mean(amount, na.rm = TRUE)),
       new_amount_slope = ifelse (all_na(amount), 
                                  NA, 
-                                 lm(amount ~ year)[[2]])
+                                 lm(amount ~ year)$coefficients[[2]])
     ) %>%
     rename(
       amount = new_amount,
@@ -357,13 +357,20 @@ Let's split the table into two - one with just life expectancy, and
 one with just the population. This will allow us to use just the data we need.
 
 ```{r}
-life_exp <- life_exp_and_pop %>%
-  select(country, year, life_expectancy)
-life_exp
+# Sanity check
+sum(is.na(life_exp_and_pop))
+```
 
-pop <- life_exp_and_pop %>%
-  select(country, year, population)
-pop
+```{r}
+life_exp <- life_exp_and_pop %>%
+  select(-population) %>%
+  group_by(country) %>%
+  summarise(
+    life_exp = mean(life_expectancy, na.rm = TRUE),
+    slope_life_exp = lm(life_expectancy ~ year)$coefficients[[2]]
+  )
+
+life_exp
 ```
 
 To find population per age group, we can use another table from OWID:
@@ -421,11 +428,18 @@ create_postgres_table <- function(con, table_name, table_df) {
   }
 }
 
+remove_all_postgres_tables <- function(con) {
+  dbRemoveTable(con, "ed_spending")
+  dbRemoveTable(con, "ed_quality")
+  dbRemoveTable(con, "life_exp")
+  dbRemoveTable(con, "pop_per_age_group")
+  dbRemoveTable(con, "dmc_ptb_flows")
+}
+remove_all_postgres_tables(con)
+
 create_postgres_table(con, "ed_spending", ed_spending)
 create_postgres_table(con, "ed_quality", ed_quality)
 create_postgres_table(con, "life_exp", life_exp)
 create_postgres_table(con, "pop_per_age_group", pop_per_age_group)
 create_postgres_table(con, "dmc_ptb_flows", dmc_ptb_flows)
-
-# dbRemoveTable(con, "population")
 ```
