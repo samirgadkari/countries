@@ -392,6 +392,35 @@ pop_per_age_group <- pop_per_age_group %>%
                        # collected in 2015. We don't want it.
 pop_per_age_group
 ```
+```{r}
+pop_per_age_group <- pop_per_age_group %>%
+  group_by(country, year) %>%
+  summarise(
+    year = year,
+    age_0_to_4 = age_0_to_4,
+    age_5_to_14 = age_5_to_14,
+    age_15_to_24 = age_15_to_24,
+    age_25_to_60 = age_25_to_60,
+    age_70_plus = age_70_plus,
+    total_pop = sum(age_0_to_4 : age_70_plus, na.rm = TRUE)
+  ) %>%
+  group_by(country) %>%
+  summarise(
+    last_year = last(year),
+    age_0_to_4 = sum(age_0_to_4),
+    age_5_to_14 = sum(age_5_to_14),
+    age_15_to_24 = sum(age_15_to_24),
+    age_25_to_60 = sum(age_25_to_60),
+    age_70_plus = sum(age_70_plus),
+    slope_total_pop = lm(total_pop ~ year)$coefficients[[2]],
+    total_pop = sum(total_pop)
+  ) %>%
+  select(country, last_year, age_0_to_4, age_5_to_14, age_15_to_24,
+         age_25_to_60, age_70_plus, total_pop, slope_total_pop)
+```
+```{r}
+pop_per_age_group
+```
 
 
 ## 4 Intrastructure development
