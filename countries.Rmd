@@ -470,3 +470,74 @@ create_postgres_table(con, "life_exp", life_exp)
 create_postgres_table(con, "pop_per_age_group", pop_per_age_group)
 create_postgres_table(con, "dmc_ptb_flows", dmc_ptb_flows)
 ```
+```{r}
+dbListTables(con)
+dbListFields(con, "ed_spending")
+
+# Read small tables using dbReadTable
+e_s <- dbReadTable(con, "ed_spending")
+e_s
+
+# Read small tables using dbGetQuery
+e_s <- dbGetQuery(con, "select * from ed_spending")
+e_s
+
+# Read larger tables using dbSendQuery
+# where query is for the entire table,
+# and dbFetch with the batch size.
+
+result_set <- dbSendQuery(con, "select * from ed_spending")
+table_result <- NULL
+while(dbHasCompleted(result_set) == FALSE) {
+  table_chunk <- dbFetch(result_set, n = 10)
+  if (is.null(table_result)) {
+    table_result <- table_chunk
+  } else {
+    table_result <- rbind(table_result, table_chunk)
+  }
+}
+dbClearResult(result_set)
+table_result
+```
+
+Useful DBI commands:
+
+  * dbExistsTable(con, "trial_db")
+  * dbWriteTable(con, "trial_db", trial_data): Creates table from df
+  * dbWriteTable(con, "trial_db", trial2_data, overwrite = TRUE)
+  * dbWriteTable(con, "trial_db", trial2_data, append = TRUE)
+  * dbExecute(con, "INSERT into trial_db (x, y) VALUES (32, 'c'), (45,                                                         'k'), (61, 'h')")
+    Inserts row into table. You can do the same with dbSendStatement
+    and the same parameters as dbExecute
+  * dbListTables(con)
+  * dbRemoveTable(con, "trial_db)
+  * dbQuoteIdentifier(con, "rating")
+    Quote an identifier before pasting it into a SQL statement
+  * dbQuoteLiteral(con, "G")
+  
+    Quote an literal before pasting it into a SQL statement
+    query <- paste0("SELECT title, ", safe_id, 
+                    " FROM film WHERE ", safe_id, " = ", safe_param )
+    
+  * Parametrizing queries:
+    The "?" character in the query is replaced with the param value.
+    
+    q_params <- list('G', 90)
+    query <- paste("SELECT title, rating, length FROM film WHERE 
+                    rating = ? and length >= ?")
+    res <- dbSendQuery(con, query, params = q_params)
+    dbFetch(res, n = 3)
+    
+  * The same query can be used multiple times with different parameters:
+  
+    res <- dbSendQuery(con, "SELECT * FROM film WHERE rating = ?")
+    dbBind(res, list("G"))
+    dbFetch(res, n = 3)
+    dbBind(res, list("PG"))
+    dbFetch(res, n = 3)
+    
+  * The same query can be used at once with multiple values of the param:
+  
+    res <- dbSendQuery(con, "SELECT * FROM film WHERE rating = ?")
+    dbBind(res, list(c("G", "PG")))
+    dbFetch(res, n = 3)
