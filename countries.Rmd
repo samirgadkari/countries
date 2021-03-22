@@ -426,13 +426,16 @@ pop_per_age_group
 
 ```{r}
 db_connect <- function(db = NULL, host, port) {
-  secrets <- fromJSON(file = "../secrets.json")
+  
+  user <- keyring::key_list("LocalPostgresAccess")
+  
   dbConnect(RPostgres::Postgres(),
             dbname = db,
             host = host,
             port = port,
             user = secrets$username,
-            password = secrets$password)
+            password = keyring::key_get("LocalPostgresAccess", 
+                                        user$username))
 }
 
 db_disconnect <- function(con) {
@@ -441,8 +444,6 @@ db_disconnect <- function(con) {
 ```
 
 ```{r}
-secrets <- fromJSON(file = "../secrets.json")
-
 con <- db_connect("countries", "localhost", "5432")
 ```
 
