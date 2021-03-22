@@ -485,19 +485,34 @@ e_s
 # Read larger tables using dbSendQuery
 # where query is for the entire table,
 # and dbFetch with the batch size.
+```
 
-result_set <- dbSendQuery(con, "select * from ed_spending")
-table_result <- NULL
-while(dbHasCompleted(result_set) == FALSE) {
-  table_chunk <- dbFetch(result_set, n = 10)
-  if (is.null(table_result)) {
-    table_result <- table_chunk
-  } else {
-    table_result <- rbind(table_result, table_chunk)
+```{r}
+# Runs a query "query" using the DBI library against the connection "con."
+# Applies the "apply_func" function to each result-set before appending
+# it to the table.
+# Returns the table.
+run_chunked_query <- function(con, query, n = 10, apply_func = identity) {
+  
+  result_set <- dbSendQuery(con, query)
+  table_result <- NULL
+
+  while(dbHasCompleted(result_set) == FALSE) {
+    table_chunk <- apply_func(dbFetch(result_set, n = n))
+    if (is.null(table_result)) {
+      table_result <- table_chunk
+    } else {
+      table_result <- rbind(table_result, table_chunk)
+    }
   }
+
+  dbClearResult(result_set)
+  table_result
 }
-dbClearResult(result_set)
-table_result
+```
+
+```{r}
+run_chunked_query(con, "select * from ed_spending", 10)
 ```
 
 Useful DBI commands:
