@@ -240,7 +240,7 @@ names(flows) <- stringr::str_to_lower(names(flows))
 unique(flows$units)
 flows <- flows %>% select(-units)
 
-flows
+head(flows)
 ```
 ```{r}
 flows %>%
@@ -288,7 +288,7 @@ flows <- flows %>%
   summarise(
     amount = sum(amount)
   )
-flows
+head(flows)
 ```
 
 ```{r}
@@ -319,14 +319,14 @@ DMC_PTB <- function(prod) {
 }
 
 dmc_ptb_energy = DMC_PTB("energy")
-dmc_ptb_energy
+head(dmc_ptb_energy)
 dmc_ptb_minerals = DMC_PTB("minerals")
-dmc_ptb_minerals
+head(dmc_ptb_minerals)
 
 dmc_ptb_flows <- dmc_ptb_energy %>% 
   full_join(dmc_ptb_minerals) %>%
   arrange(country, product, flow)
-dmc_ptb_flows
+head(dmc_ptb_flows)
 ```
 Notice that these values are not compared to the population.
 We cannot really compare these countries unless we compare consumption
@@ -337,7 +337,7 @@ always seem to be consuming more.
 
 ```{r}
 life_exp_and_pop <- read_csv("../owid-datasets/datasets/Life expectancy & population - Gapminder (2019), UN (2019), and Our World In Data (2019)/Life expectancy & population - Gapminder (2019), UN (2019), and Our World In Data (2019).csv")
-life_exp_and_pop
+head(life_exp_and_pop)
 ```
 
 Let's remove the rows with year = 1800 and year = 1950
@@ -347,7 +347,7 @@ names(life_exp_and_pop) <- stringr::str_to_lower(names(life_exp_and_pop))
 life_exp_and_pop <- life_exp_and_pop %>% 
   rename(life_expectancy = `life expectancy`) %>%
   rename(country = entity)
-life_exp_and_pop
+head(life_exp_and_pop)
 ```
 Let's split the table into two - one with just life expectancy, and
 one with just the population. This will allow us to use just the data we need.
@@ -367,13 +367,13 @@ life_exp <- life_exp_and_pop %>%
     slope_life_exp = lm(life_expectancy ~ year)$coefficients[[2]]
   )
 
-life_exp
+head(life_exp)
 ```
 
 To find population per age group, we can use another table from OWID:
 ```{r}
 pop_per_age_group <- read.csv("../owid-datasets/datasets/Total population by broad age group, both sexes, 1950-2100 - UN Population Division (2015)/Total population by broad age group, both sexes, 1950-2100 - UN Population Division (2015).csv")
-pop_per_age_group
+head(pop_per_age_group)
 ```
 Change column names to lowercase. Make names shorter.
 ```{r}
@@ -387,7 +387,7 @@ pop_per_age_group <- pop_per_age_group %>%
   rename(country = entity) %>%
   filter(year < 2015)  # Anything after 2014 is prediction, since data was
                        # collected in 2015. We don't want it.
-pop_per_age_group
+head(pop_per_age_group)
 ```
 ```{r}
 pop_per_age_group <- pop_per_age_group %>%
@@ -416,7 +416,7 @@ pop_per_age_group <- pop_per_age_group %>%
          age_25_to_60, age_70_plus, total_pop, slope_total_pop)
 ```
 ```{r}
-pop_per_age_group
+head(pop_per_age_group)
 ```
 
 
@@ -433,7 +433,7 @@ db_connect <- function(db = NULL, host, port) {
             dbname = db,
             host = host,
             port = port,
-            user = secrets$username,
+            user = user$username,
             password = keyring::key_get("LocalPostgresAccess", 
                                         user$username))
 }
@@ -528,9 +528,9 @@ Useful DBI commands:
   * dbRemoveTable(con, "trial_db)
   * dbQuoteIdentifier(con, "rating")
     Quote an identifier before pasting it into a SQL statement
-  * dbQuoteLiteral(con, "G")
-  
-    Quote an literal before pasting it into a SQL statement
+  * Quote an literal before pasting it into a SQL statement:
+    
+    dbQuoteLiteral(con, "G")
     query <- paste0("SELECT title, ", safe_id, 
                     " FROM film WHERE ", safe_id, " = ", safe_param )
     
